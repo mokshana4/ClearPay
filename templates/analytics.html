@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "macros.html" import icon, empty %}
+{% block title %}Analytics{% endblock %}
+{% block content %}
+<section class="an-board">
+  <h1 class="an-title">Analytics</h1>
+
+  <div class="an-tiles" aria-label="Headline numbers">
+    <div class="an-tile t-blue">
+      <span class="an-pill">Approved spend</span>
+      <div><b class="an-big">{{ a.spend_total|inr_short }}</b>
+        <small>{{ a.spend_count }} invoice{{ 's' if a.spend_count != 1 }} · {{ a.paid_total|inr_short }} paid</small></div>
+    </div>
+    <div class="an-tile t-violet">
+      <span class="an-pill">Fraud stopped</span>
+      <div><b class="an-big">{{ a.fraud_amount|inr_short }}</b>
+        <small>{{ a.fraud_count }} risky invoice{{ 's' if a.fraud_count != 1 }} held before payment</small></div>
+    </div>
+    <div class="an-tile t-plain">
+      <span class="an-pill">Estimated savings</span>
+      <div><b class="an-big">{{ a.saved.total|inr_short }}</b>
+        <small>duplicates, fraud, overcharges and staff time</small></div>
+    </div>
+  </div>
+
+  <div class="an-charts">
+    <section class="an-card" aria-label="Spend by vendor">
+      <h2>Spend by vendor</h2>
+      {% if breakdown %}
+      <div class="an-cols">
+        {% for c in breakdown %}
+        <div class="an-col c{{ loop.index }}" style="--h: {{ c.h }}%; --i: {{ loop.index0 }}" title="{{ c.label }}: {{ c.amount|inr }}">
+          <b>{{ c.pct }}%</b><span>{{ c.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}{% call empty('chart-column', 'No approved spend yet.') %}{% endcall %}{% endif %}
+    </section>
+
+    <section class="an-card" aria-label="Spend by month">
+      <h2>Spend by month</h2>
+      {% if months %}
+      <div class="an-chart">
+        <div class="an-axis">{% for t in ticks %}<span>{{ t|inr_short }}</span>{% endfor %}</div>
+        <div class="an-plot">
+          <div class="an-grid">{% for t in ticks %}<i></i>{% endfor %}</div>
+          <div class="an-bars">
+            {% for m in months %}
+            <div class="an-bar-wrap"><div class="an-bar" style="--h: {{ m.h }}%; --i: {{ loop.index0 }}" title="{{ m.label }}: {{ m.amount|inr }}"><em>{{ m.amount|inr_short }}</em></div></div>
+            {% endfor %}
+          </div>
+        </div>
+        <div></div>
+        <div class="an-xlabels">{% for m in months %}<span>{{ m.label }}</span>{% endfor %}</div>
+      </div>
+      {% else %}{% call empty('chart-column', 'No approved spend yet.') %}{% endcall %}{% endif %}
+    </section>
+  </div>
+</section>
+
+<section class="an-board" aria-label="Spending insights">
+  <h2 class="an-h2">Spending insights</h2>
+  {% for n in notes %}
+  <a class="an-note n-{{ n.tone }}" href="{{ n.link }}">
+    <b>{{ n.title }}</b><span>{{ n.body }}</span>
+  </a>
+  {% else %}<p class="muted m-0">Insights appear once invoices have been processed.</p>{% endfor %}
+</section>
+
+<div class="an-lower">
+  <section class="an-board" aria-label="Money saved">
+    <h2 class="an-h2">Money saved</h2>
+    <div class="kv"><span>Duplicate and re-sent invoices blocked</span><b>{{ a.saved.duplicates|inr }}</b></div>
+    <div class="kv"><span>Other fraud stopped</span><b>{{ a.saved.fraud|inr }}</b></div>
+    <div class="kv"><span>Overcharges caught (billed above the PO)</span><b>{{ a.saved.overcharges|inr }}</b></div>
+    <div class="kv"><span>AP staff time ({{ a.saved.hands_free }} invoice{{ 's' if a.saved.hands_free != 1 }} × {{ a.saved.per_invoice|inr_short }})</span><b>{{ a.saved.staff_time|inr }}</b></div>
+    <div class="kv"><span><b>Total</b></span><b style="color: var(--ok)">{{ a.saved.total|inr }}</b></div>
+    <p class="muted mt-2 mb-0" style="font-size: 12.5px">Each invoice is counted once. Blocked amounts are invoices never approved for payment.</p>
+  </section>
+  <section class="an-board" aria-label="Fraud caught by type">
+    <h2 class="an-h2">Fraud caught, by type</h2>
+    {% for t in a.fraud_by_type %}<div class="kv"><span>{{ t.type }}</span><b>{{ t.count }} · {{ t.amount|inr_short }}</b></div>
+    {% else %}{% call empty('shield-check', 'No fraud signals so far.') %}{% endcall %}{% endfor %}
+  </section>
+  <section class="an-board" aria-label="The AI's part">
+    <h2 class="an-h2">The AI's part</h2>
+    <div class="kv"><span>Invoices investigated (AI / rules)</span><b>{{ a.ai.investigations }} ({{ a.ai.ai_investigations }} / {{ a.ai.investigations - a.ai.ai_investigations }})</b></div>
+    <div class="kv"><span>People agreed with the Investigator</span><b>{% if a.ai.agreement_pct is none %}—{% else %}{{ a.ai.agreement_pct }}% ({{ a.ai.agreed }}/{{ a.ai.decided }}){% endif %}</b></div>
+    <div class="kv"><span>Lines matched by smart matching</span><b>{{ a.ai.ai_matched_lines }}</b></div>
+    <div class="kv"><span>Groq tokens (billed in USD)</span><b>{{ '{:,}'.format(a.ai.tokens) }} · ${{ a.ai.cost_usd }}</b></div>
+    <p class="muted mt-2 mb-0" style="font-size: 12.5px">The AI recommends; people decide. See <a href="{{ url_for('compare') }}">Rules vs AI</a>.</p>
+  </section>
+</div>
+{% endblock %}

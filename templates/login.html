@@ -1,0 +1,160 @@
+{% from "macros.html" import icon %}
+<!doctype html>
+<html lang="en" data-theme-pref="">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · ClearPay</title>
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='brand/clearpay-favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='brand/clearpay-favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='brand/clearpay-app-icon-180.png') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body class="login-page" data-icons="{{ url_for('static', filename='icons.svg') }}">
+{% if not error and not notice and step != 'mfa' %}
+{# Opening titles, once per browser session (theme.js hides it on later visits). Decorative only. #}
+<div class="ls-intro" id="ls-intro" aria-hidden="true">
+  <div class="ls-intro-half top"></div><div class="ls-intro-half bot"></div>
+  <span class="ls-intro-line"></span>
+  <div class="ls-intro-core"><img src="{{ url_for('static', filename='brand/clearpay-mark.svg') }}" alt=""><b>ClearPay</b></div>
+</div>
+{% endif %}
+<div class="login-wrap">
+  <div class="ls-bg" aria-hidden="true"><div class="ls-aurora"><i></i><i></i><i></i></div><div class="ls-grid"></div></div>
+  {# Showcase: an invoice being checked, on a loop; visitors can pick a scenario or flip the invoice to its PO.
+     The animated scene is decorative (hidden from screen readers); the buttons and a short live summary are not. #}
+  <aside class="login-stage" aria-label="What ClearPay checks">
+    <div class="ls-inner" id="ls-inner">
+    <div class="ls-brand" aria-hidden="true"><img src="{{ url_for('static', filename='brand/clearpay-mark.svg') }}" alt=""><b>ClearPay</b></div>
+    <div class="ls-copy">
+      <h2>Every invoice checked against its purchase order, <span>before anyone pays.</span></h2>
+      <p class="ls-sub">An AI agent reads every invoice, verifies the vendor, the totals and the PO line&nbsp;by&nbsp;line, and puts only the exceptions in front of your team.</p>
+    </div>
+    <div class="ls-scene" id="ls-scene" aria-hidden="true">
+      <div class="ls-doc ls-doc-b2"></div>
+      <div class="ls-doc ls-doc-b1"></div>
+      <div class="ls-doc ls-doc-main">
+        <div class="ls-content">
+          <div class="ls-doc-head">
+            <div><small>Tax invoice</small><b id="ls-inv">INV-0423</b></div>
+            <div class="ls-amt"><small>Total</small><b id="ls-total">₹1,18,000.00</b></div>
+          </div>
+          <div class="ls-vendor"><span id="ls-vendor">Alpha Office Supplies</span><em id="ls-po">PO-2041</em></div>
+          <ul class="ls-rows">
+            <li><span class="ls-bar"></span><span class="ls-bar"></span><i class="ls-tick"></i></li>
+            <li><span class="ls-bar"></span><span class="ls-bar"></span><i class="ls-tick"></i></li>
+            <li><span class="ls-bar"></span><span class="ls-bar"></span><i class="ls-tick"></i></li>
+            <li><span class="ls-bar"></span><span class="ls-bar"></span><i class="ls-tick"></i></li>
+          </ul>
+          <div class="ls-bank"><small>Bank account</small><span id="ls-bank">•••• 4521</span><i class="ls-tick"></i></div>
+          <div class="ls-stamp" id="ls-stamp">Matched to PO</div>
+        </div>
+        <div class="ls-po" id="ls-po-face">
+          <div class="ls-doc-head">
+            <div><small>Purchase order</small><b id="ls-po-no">PO-2041</b></div>
+            <div class="ls-amt"><small>Approved</small><b id="ls-po-total">₹1,18,000.00</b></div>
+          </div>
+          <div class="ls-vendor"><span id="ls-po-vendor">Alpha Office Supplies</span><em>Issued by Purchasing</em></div>
+          <ul class="ls-po-lines" id="ls-po-lines"></ul>
+          <div class="ls-po-foot" id="ls-po-foot">Every line matches the invoice</div>
+        </div>
+        <div class="ls-beam"></div>
+        <span class="ls-drag-hint">Drag to flip</span>
+      </div>
+      <div class="ls-log">
+        <div class="ls-log-head"><span class="ls-pulse"></span>Agent steps</div>
+        <ol id="ls-log"></ol>
+      </div>
+    </div>
+    <div class="ls-try" role="group" aria-label="Try a scenario">
+      <span class="ls-try-label">Try it</span>
+      <button type="button" class="ls-chip" data-scene="0" aria-pressed="true">Clean invoice</button>
+      <button type="button" class="ls-chip" data-scene="1" aria-pressed="false">Bank changed</button>
+      <button type="button" class="ls-chip" data-scene="2" aria-pressed="false">Price above PO</button>
+      <button type="button" class="ls-chip" data-scene="3" aria-pressed="false">Duplicate</button>
+      <button type="button" class="ls-chip ls-chip-flip" id="ls-flip-btn" aria-pressed="false">{{ icon('refresh-cw', 'ic-sm') }}See the PO</button>
+    </div>
+    <p class="sr-only" id="ls-live" aria-live="polite"></p>
+    </div>
+  </aside>
+
+  <div class="login-col" id="login-col">
+    <div class="login-logo enter-logo"><img src="{{ url_for('static', filename='brand/clearpay-mark.svg') }}" alt=""><b>ClearPay</b></div>
+    <div class="login-tilt" id="login-tilt">
+    <div class="panel login-card enter-card {{ 'has-error' if error }}">
+      <div class="login-progress"></div>
+      {# Shown after a correct sign-in (login.js flips the card to this face, then opens the dashboard). #}
+      <div class="login-welcome" id="login-welcome" hidden>
+        <span class="lw-badge"><span class="lw-avatar" id="lw-avatar"></span>
+          <svg class="lw-ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56"/></svg>
+          <svg class="lw-tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M7 12.5l3.2 3.2L17 9"/></svg></span>
+        <h2 id="lw-title">Welcome back</h2>
+        <p>Opening your workspace…</p>
+        <span class="lw-bar" aria-hidden="true"></span>
+      </div>
+      {% if step == 'mfa' %}
+      {# Messages replace the subtitle in a fixed-height slot, so the card never changes size. #}
+      <div class="login-head">
+        <h1 class="d-flex align-items-center gap-2"><span class="mfa-badge">{{ icon('shield-check') }}</span>Two-step verification</h1>
+        <div class="login-msg">
+          {% if error %}<div class="login-alert bad" role="alert">{{ icon('circle-alert', 'ic-sm') }}<span>{{ error }}</span></div>
+          {% else %}<p>{{ mfa_name }}, enter the 6-digit code from your authenticator app.</p>{% endif %}
+        </div>
+      </div>
+      <form method="post" action="{{ url_for('login_mfa') }}" id="mfa-form" class="stagger d-flex flex-column gap-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div><label class="form-label" for="code">Authentication code</label>
+          <input class="form-control mfa-input" id="code" name="code" required autofocus autocomplete="one-time-code" inputmode="numeric"
+                 maxlength="11" placeholder="123 456" aria-describedby="code-hint">
+          <span class="form-hint d-block" id="code-hint">No phone? Type one of your recovery codes instead (like <span class="mono">abcde-fghjk</span>).</span></div>
+        <button class="btn btn-primary w-100" type="submit" id="signin-btn" data-busy-text="Checking…">{{ icon('shield-check', 'ic-sm') }}<span>Verify and sign in</span></button>
+        <a class="link-btn text-center" href="{{ url_for('login') }}">Cancel and start again</a>
+      </form>
+      {% else %}
+      <div class="login-head">
+        <h1>Sign in</h1>
+        <div class="login-msg">
+          {% if error %}<div class="login-alert bad" role="alert">{{ icon('circle-alert', 'ic-sm') }}<span>{{ error }}</span></div>
+          {% elif notice %}<div class="login-alert ok" role="status">{{ icon('circle-check', 'ic-sm') }}<span>{{ notice }}</span></div>
+          {% else %}<p>Accounts payable workspace for the AP team, managers and admins.</p>{% endif %}
+        </div>
+      </div>
+      {% if google_on %}
+      <div class="stagger d-flex flex-column gap-3 mb-3">
+        <a class="btn btn-google w-100" href="{{ url_for('google_start', next=request.args.get('next')) }}" id="google-btn">{% include "_google_g.html" %}<span>Continue with Google</span></a>
+        <div class="login-or"><span>or use your username or email</span></div>
+      </div>
+      {% endif %}
+      <form method="post" autocomplete="on" id="login-form" class="stagger d-flex flex-column gap-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div><label class="form-label" for="u">Username or email</label>
+          <input class="form-control" id="u" name="username" required autofocus autocomplete="username" maxlength="254"></div>
+        <div><label class="form-label" for="p">Password</label>
+          <div class="pw-wrap"><input class="form-control" id="p" name="password" type="password" required autocomplete="current-password">
+            <button class="pw-toggle" type="button" data-pw-toggle="p" aria-label="Show password" aria-pressed="false">{{ icon('eye') }}</button></div>
+          <div class="caps-warn" id="caps-warn" role="status" hidden>{{ icon('triangle-alert', 'ic-sm') }}Caps Lock is on</div></div>
+        <div class="d-flex justify-content-between align-items-center">
+          <label class="form-check d-flex align-items-center gap-2 m-0" style="font-size: 14px"><input class="form-check-input m-0" type="checkbox" id="remember"> Remember my username</label>
+          <button class="link-btn" type="button" id="forgot-btn" aria-expanded="false" aria-controls="forgot">Forgot password?</button>
+        </div>
+        <button class="btn btn-primary w-100" type="submit" id="signin-btn" data-busy-text="Signing in…">{{ icon('lock', 'ic-sm') }}<span>Sign in</span></button>
+        <div class="forgot-panel" id="forgot" hidden>
+          Passwords are reset by your ClearPay administrator: they open <b>Settings &amp; users</b> and choose <b>Reset password</b>.
+          ClearPay doesn't send reset links by email yet.
+        </div>
+      </form>
+      {% if google_on and google_signup %}<p class="login-signup">New to ClearPay? <a href="{{ url_for('google_start') }}">Request access with Google</a></p>{% endif %}
+      {% endif %}
+    </div>
+    </div>
+    {% if show_demo_hint %}<p class="login-foot enter-logo">Demo users: <b>prashasthi</b>, <b>ap_user2</b> (AP team), <b>mokshana</b> (manager), <b>admin</b>. The password is <code>DEMO_PASSWORD</code> from <code>.env</code>.</p>{% endif %}
+  </div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='login.js') }}"></script>
+</body>
+</html>
