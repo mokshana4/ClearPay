@@ -47,6 +47,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r requirements-dev.txt
-      - run: python generate_data.py
+      - name: Generate test data
+        run: python import_kaggle_pos.py --no-backup
       - name: Unit and security tests on PostgreSQL
         run: pytest -q
